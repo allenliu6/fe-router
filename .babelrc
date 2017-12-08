@@ -1,0 +1,10 @@
+{
+    "presets": [
+        [
+            "es2015",
+            {
+                "modules": false
+            }
+        ], // 因为webpack 2 本身已支持es6 module
+    ]
+}

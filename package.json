@@ -1,0 +1,33 @@
+{
+  "name": "fe-router",
+  "version": "1.0.0",
+  "description": "前端路由的两种实现",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "webpack-dev-server --config webpack.config.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/allenliu6/fe-router.git"
+  },
+  "keywords": [
+    "router",
+    "hash",
+    "history"
+  ],
+  "author": "allen",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/allenliu6/fe-router/issues"
+  },
+  "homepage": "https://github.com/allenliu6/fe-router#readme",
+  "devDependencies": {
+    "babel-cli": "^6.24.1",
+    "babel-loader": "^7.1.1",
+    "babel-preset-es2015": "^6.24.1",
+    "html-webpack-plugin": "^2.30.1",
+    "webpack": "^3.3.0",
+    "webpack-dev-server": "^2.9.7"
+  }
+}
