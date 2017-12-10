@@ -3,6 +3,7 @@ const root = __dirname
 const fs = require('fs')
 const webpack = require('webpack')
 const HtmlWebpackPlugin = require('html-webpack-plugin')
+const CleanWebpackPlugin = require('clean-webpack-plugin')
 
 module.exports = {
     entry: [
@@ -16,7 +17,7 @@ module.exports = {
         ]
     },
     output: {
-        filename: 'router.js',
+        filename: '[name].[hash:4].js',
         path: path.resolve(root, 'dist'),
         publicPath: '/'
     },
@@ -28,8 +29,14 @@ module.exports = {
         historyApiFallback: true
     },
     plugins: [
+        new CleanWebpackPlugin(['dist']),
+        //持久化moduleId
+        new webpack.HashedModuleIdsPlugin(),
+        new webpack.optimize.CommonsChunkPlugin({
+            name: 'manifest',
+        }),
         new HtmlWebpackPlugin({
-            title: 'React Demo',
+            filename: 'index.html',
             template: path.resolve(root, 'index.html')
         }),
         new webpack.HotModuleReplacementPlugin(), // 热替换插件

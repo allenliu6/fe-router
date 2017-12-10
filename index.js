@@ -1,4 +1,5 @@
 import { supportsPushState } from './util'
+import { DOMInit, postClickCallback } from './DOMInit'
 
 class Router {
 
@@ -17,14 +18,15 @@ class Router {
                 callbacks[key] = route[key]
         })
 
-        if(supportsPushState) mode = 'hash'
+        if (!supportsPushState) mode = 'hash'
 
+        DOMInit(mode)
         if (mode === 'hash') {
             this.history = new hashHistory(callbacks)
         } else if (mode === 'history') {
             this.history = new htmlHistory(callbacks)
         } else {
-            throw new Error('param mode need hash or history')
+            throw new Error(' class Router param mode need hash or history')
         }
     }
 }
@@ -34,6 +36,9 @@ class Router {
 class htmlHistory {
 
     constructor(route) {
+        this.addListener = this.addListener.bind(this)
+        this.callback = this.callback.bind(this)
+
         const callbacks = this.callbacks = {}
         Object.keys(route).forEach(key => {
             if (typeof route[key] === 'function') {
@@ -42,20 +47,34 @@ class htmlHistory {
         })
 
         this.addListener()
+        this.order = 0
     }
 
     addListener() {
         // 监听popstate 事件，非 pushState replaceState 操作都会触发
         window.addEventListener('popstate', e => {
-            e.preventDefault()
-            console.log(e.state)
+            // 已经前进后退的当前值
+            // state里只需要 component信息    每次 change 要将全局保存变量 state 跟当前state进行比较
+            if(!e.state.order) {
+                console.log('初始页')
+                this.order = e.state.order
+                return
+            }
+            if(this.order > e.state.order) {
+                console.log('后退')
+            } else if(this.order < e.state.order) {
+                console.log('前进')
+            }
+            this.order = e.state.order
         })
+
+        postClickCallback(this.callback)
     }
 
-    push(){
-        history.pushState({}, '', )
+    callback(elem) {
+        let key = elem.innerHTML
+        history.pushState({key, order: ++this.order}, '', `${window.location.origin}/${key}`)
     }
-
 }
 
 class hashHistory {
@@ -108,6 +127,6 @@ const route = {
     c: 2
 }
 new Router({
-    mode: 'hash',
+    mode: 'history',
     route
 })

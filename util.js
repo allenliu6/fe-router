@@ -1,4 +1,4 @@
-export const supportsPushState = inBrowser && (function () {
+export const supportsPushState = (function () {
     const ua = window.navigator.userAgent
 
     if (
