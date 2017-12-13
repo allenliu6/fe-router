@@ -1,7 +1,4 @@
 import Router from './src/router'
-import route from './src/constant'
+import params from './src/constant'
 
-new Router({
-    route,
-    mode: 'history'
-})
+new Router(params)

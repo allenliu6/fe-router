@@ -1,45 +1,40 @@
 import { supportsPushState } from './util'
 import { DOMInit, postClickCallback } from './DOMInit'
 
+// 将对象拍平成 map 路由信息   看情况扩展
+// DOM 操作在 Router对象中     去掉两个冗余对象，整合进 Router中
+// 钩子
 class Router {
 
-    constructor({ mode = 'hash', route = {} }) {
-        // 初始化数据
-        this.hash = window.location.hash
-
-        // 根据框架需求对 传入路由参数进行处理
-        const callbacks = this.callbacks = {}
-        Object.keys(route).forEach(key => {
-            if (typeof route[key] !== 'function') {
-                callbacks[key] = () => {
-                    console.log(route[key])
-                }
-            } else
-                callbacks[key] = route[key]
-        })
-
+    constructor({ mode = 'hash', route = [] }) {
         // 如果不支持 html5 history API 则自动降级 hash 模式
         if (!supportsPushState) mode = 'hash'
 
-        // DOM 等路由外部相关操作
-        DOMInit(mode)
-
         // 模式选择并进行相应初始化
+        let hrefPlus = ''
         if (mode === 'hash') {
+            hrefPlus = '#/'
             this.history = new hashHistory(callbacks)
         } else if (mode === 'history') {
+            hrefPlus = '/'
             this.history = new htmlHistory(callbacks)
         } else {
             throw new Error(' class Router param mode need hash or history')
         }
+
+        this.root = window.location.origin + hrefPlus
+    }
+
+    changeRoute(path) {
+        document.querySelector('#')
     }
 }
-
 
 // 接收路由map  只包含具体跳转处理逻辑  黑盒
 class htmlHistory {
 
     constructor(callbacks) {
+        // 必须显式绑定？
         this.addListener = this.addListener.bind(this)
         this.callback = this.callback.bind(this)
 
@@ -125,6 +120,5 @@ class hashHistory {
         }
     }
 }
-
 
 export default Router
