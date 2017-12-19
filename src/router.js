@@ -1,12 +1,18 @@
 import { supportsPushState } from './util'
 import { DOMInit, postClickCallback } from './DOMInit'
 
-// 将对象拍平成 map 路由信息   看情况扩展
-// DOM 操作在 Router对象中     去掉两个冗余对象，整合进 Router中
-// 钩子
 class Router {
 
     constructor({ mode = 'hash', route = [] }) {
+        // 初始化
+        this.changeRoute = this.changeRoute.bind(this)
+        this.getRenderList = this.getRenderList.bind(this)
+        this.renderComponent = this.renderComponent.bind(this)
+        this.go = this.go.bind(this)
+
+        this.route = route
+        this.root = window.location.origin + hrefPlus
+
         // 如果不支持 html5 history API 则自动降级 hash 模式
         if (!supportsPushState) mode = 'hash'
 
@@ -14,19 +20,68 @@ class Router {
         let hrefPlus = ''
         if (mode === 'hash') {
             hrefPlus = '#/'
-            this.history = new hashHistory(callbacks)
+            this.history = new hashHistory(route)
         } else if (mode === 'history') {
             hrefPlus = '/'
-            this.history = new htmlHistory(callbacks)
+            this.history = new htmlHistory(route)
         } else {
             throw new Error(' class Router param mode need hash or history')
         }
-
-        this.root = window.location.origin + hrefPlus
     }
 
+    // 暂定格式为 /sd/asda/sa   
+    // children 是存在组件嵌套视图的真实反映，要求container是包含关系,所以变化时必须要讲父组件全部渲染，性能方面考量 变化对比，少进行 dom 操作
     changeRoute(path) {
-        document.querySelector('#')
+        const renderList = this.getRenderList(path),
+            { renderComponent } = this
+        console.log(renderList)
+
+        renderList.forEach(routeObj => {
+            renderComponent(routeObj)
+        })
+    }
+
+    renderComponent(route) {
+        const { container, component, hooks } = route
+        document.querySelector(container).innerHTML = component
+
+    }
+
+    getRenderList(path) {
+        const pathArr = path.split("/"),
+            renderList = []
+
+        pathArr.shift()
+        let target = this.route
+
+        if (pathArr.length === 0) {
+            for (let i = 0; i < target.length; i++) {
+                if (target[i].path === '/') {
+                    return target[i]
+                }
+            }
+        }
+
+        for (let i = 0, length = pathArr.length; i < length; i++) {
+
+            for (let j = 0, length2 = target.length; j < length2; j++) {
+                if (target[j].path === `/${pathArr[i]}`) {
+                    renderList.push(target[j])
+                    target = target[j].children
+                    if (target) break;
+                    else return renderList
+                }
+            }
+        }
+
+        return renderList
+    }
+
+    go(href) {
+        let pathArr = href.split('/')
+        pathArr.shift()
+
+        this.changeRoute(`/${pathArr.join('/')}`)
     }
 }
 
@@ -36,10 +91,8 @@ class htmlHistory {
     constructor(callbacks) {
         // 必须显式绑定？
         this.addListener = this.addListener.bind(this)
-        this.callback = this.callback.bind(this)
 
         this.order = 0
-        this.handelEventEmit = this.callback(callbacks)
         this.addListener(callbacks)
     }
 
@@ -48,7 +101,7 @@ class htmlHistory {
         window.addEventListener('popstate', e => {
             // 比较特殊，此时前进后退行为已经进行完毕
 
-            if(e.state === null) {
+            if (e.state === null) {
                 console.log('初始页')
                 this.order = 0
                 return
@@ -57,26 +110,16 @@ class htmlHistory {
             const { order: newOrder, key } = e.state,
                 { order: oldOrder } = this
 
-            if(oldOrder > newOrder) {
+            if (oldOrder > newOrder) {
                 console.log('后退')
-            } else if(oldOrder < newOrder) {
+            } else if (oldOrder < newOrder) {
                 console.log('前进')
             }
             this.order = newOrder
 
             // 比对逻辑 state里只需要 component信息  每次 change 要将全局保存变量 state 跟当前state进行diff 然后渲染component
-            // ...
             callbacks[key]()
         })
-
-        postClickCallback(this.handelEventEmit)
-    }
-
-    callback(callbacks){
-        return key => {
-            history.pushState({key, order: ++this.order}, '', `${window.location.origin}/${key}`)
-            callbacks[key]()
-        }
     }
 }
 
@@ -102,7 +145,7 @@ class hashHistory {
             let { newURL, oldURL } = e
             newURL = getHash(newURL)
             oldURL = getHash(oldURL)
-    
+
             callbacks[newURL]()
         }
     }

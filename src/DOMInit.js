@@ -1,15 +1,10 @@
-import route from './constant'
+import router from '../index'
 
-export const DOMInit = (mode, num = 3) => {
-    
-}
-
-export const postClickCallback = callback => {
-    // promise
-    const target = document.querySelector('#app')
-
-    target.addEventListener('click', e => {
+document.addEventListener('click', e => {
+    const target = e.target
+    if(target.tagName.toLowerCase() === 'a') {
         e.preventDefault()
-        callback(e.target.getAttribute('href').split(`${window.location.origin}/`)[1])
-    })
-}
+        
+        router.go(target.getAttribute('href'))
+    }
+})
