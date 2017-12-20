@@ -4,11 +4,11 @@
 
 import home from './components/home/index'
 import hello from './components/hello/index'
-import anothor from './components/anothor/index'
+import another from './components/another/index'
 
 const params = {
     mode: 'history',
-    route: [{
+    routes: [{
         path: '/',
         name: 'home',
         container: '#app',
@@ -30,10 +30,10 @@ const params = {
         }]
     },
     {
-        path: '/anothor',
-        name: 'anothor',
-        container: '#anothor',
-        component: anothor,
+        path: '/another',
+        name: 'another',
+        container: '#another',
+        component: another,
         hooks: {},
     }]
 }
