@@ -7,7 +7,7 @@ import hello from './components/hello/index'
 import another from './components/another/index'
 
 const params = {
-    mode: 'history',
+    mode: 'hash',
     routes: [{
         path: '/',
         name: 'home',

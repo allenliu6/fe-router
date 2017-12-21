@@ -13,7 +13,6 @@ class Router {
         this.createHTMLHistory = this.createHTMLHistory.bind(this)
 
         this.routes = arrayToObject(routes)
-        console.log(this.routes)
         this.oldRenderList = {}
         this.order = 0
 
@@ -21,27 +20,26 @@ class Router {
         if (!supportsPushState) mode = 'hash'
 
         // 模式选择并进行相应初始化
-        let hrefPlus = ''
+        let hrefEnding = ''
         if (mode === 'hash') {
-            hrefPlus = '#/'
-            hashHistory()
+            hrefEnding = '#/'
+            this.createHashHistory()
         } else if (mode === 'history') {
-            hrefPlus = '/'
+            hrefEnding = '/'
             this.createHTMLHistory()
         } else {
             throw new Error(' class Router param mode need hash or history')
         }
-        this.root = window.location.origin + hrefPlus
+        this.root = window.location.origin + hrefEnding
     }
 
-    // 暂定格式为 sd/asda/sa   
+    // path 暂定格式为 sd/asda/sa，即location.pathname.slice(1)
     // children 是存在组件嵌套视图的真实反映，要求container是包含关系,所以变化时必须要讲父组件全部渲染，性能方面考量 diff，少进行 dom 操作，已经完成组件层面的diff
     changeRoute(path) {
         const { renderComponents, oldRenderList, cancelComponents, getRenderList } = this,
             renderList = getRenderList(path)
 
         const { addList, deleteList } = diffObject(renderList, oldRenderList)
-        console.log(addList, deleteList)
         if (oldRenderList && oldRenderList.length) cancelComponents(deleteList)
         renderComponents(addList)
 
@@ -68,6 +66,10 @@ class Router {
 
         let target = this.routes
 
+        if (path === '') {
+            renderList.push(target['/'])
+        }
+
         if (pathArr.length === 0) {
             return target['/']
         }
@@ -84,15 +86,40 @@ class Router {
         return renderList
     }
 
+    // 对外暴露接口，接收完整URL
     go(href) {
-        let pathArr = href.split('/')
-        pathArr.shift()
+        let pathArr = href.split('/'),
+            path,
+            newHref = '',
+            location = window.location
 
-        this.changeRoute(pathArr.join('/'))
+        pathArr.shift()
+        path = pathArr.join('/')
+
+        // history stack 逻辑
+        if (location.pathname && location.pathname.length > 1) {
+            newHref = location.href.replace(location.pathname, `/${path}`)
+        } else {
+            newHref = `${location.origin}/${path + location.search}`
+        }
+        if (newHref === location.href) return
+
+        this.order++
+        window.history.pushState({
+            order: this.order,
+            path,
+            oldPath: location.pathname
+        }, path, newHref)
+
+        // 渲染逻辑
+        this.changeRoute(path)
     }
 
     createHTMLHistory() {
-        const { routes, go } = this.routes
+        const { changeRoute } = this
+
+        // 根据初始页面URL 初始化展现路由
+        changeRoute(window.location.pathname.slice(1))
 
         // 监听 popstate 事件，非 pushState replaceState 操作都会触发
         window.addEventListener('popstate', e => {
@@ -101,10 +128,11 @@ class Router {
             if (e.state === null) {
                 console.log('初始页')
                 this.order = 0
+                changeRoute('')
                 return
             }
 
-            const { order: newOrder, key } = e.state,
+            const { order: newOrder, path } = e.state,
                 { order: oldOrder } = this
 
             if (oldOrder > newOrder) {
@@ -115,48 +143,30 @@ class Router {
             this.order = newOrder
 
             // 比对逻辑 state里只需要 component信息  每次 change 要将全局保存变量 state 跟当前state进行diff 然后渲染component
-            go(href)
+            changeRoute(path)
         })
     }
-}
 
-class hashHistory {
+    createHashHistory() {
+        window.addEventListener("hashchange", e => {
+                let { newURL, oldURL } = e
+                newURL = getHash(newURL)
+                oldURL = getHash(oldURL)
 
-    constructor(callbacks) {
-        this.addListener = this.addListener.bind(this)
-        this.getHash = this.getHash.bind(this)
-        this.setHash = this.setHash.bind(this)
+                callbacks[newURL]()
+            }, false)
 
-        this.handelEventEmit = this.hashChangeCallback(callbacks)
-        this.addListener(callbacks)
-    }
-
-    addListener(callbacks) {
-        window.addEventListener("hashchange", this.handelEventEmit, false)
-    }
-
-    hashChangeCallback(callbacks) {
-        const { getHash } = this
-
-        return e => {
-            let { newURL, oldURL } = e
-            newURL = getHash(newURL)
-            oldURL = getHash(oldURL)
-
-            callbacks[newURL]()
+        function getHash(url) {
+            return url.split("#").pop()
         }
-    }
 
-    getHash(url) {
-        return url.split("#").pop()
-    }
-
-    setHash(hash, isPushHistory = true) {
-        const { location } = window
-        if (isPushHistory) {
-            location.hash = hash
-        } else {
-            location.replace(location.origin + `#${hash}`)
+        function setHash(hash, isPushHistory = true) {
+            const { location } = window
+            if (isPushHistory) {
+                location.hash = hash
+            } else {
+                location.replace(location.origin + `#${hash}`)
+            }
         }
     }
 }
