@@ -11,6 +11,8 @@ class Router {
         this.cancelComponents = this.cancelComponents.bind(this)
         this.go = this.go.bind(this)
         this.createHTMLHistory = this.createHTMLHistory.bind(this)
+        this.createHashHistory = this.createHashHistory.bind(this)
+        this.hrefToPath = this.hrefToPath.bind(this)
 
         this.routes = arrayToObject(routes)
         this.oldRenderList = {}
@@ -30,6 +32,9 @@ class Router {
         } else {
             throw new Error(' class Router param mode need hash or history')
         }
+        this.mode = mode
+        this.hrefEnding = hrefEnding
+        // 不能轻率判断 根页面
         this.root = window.location.origin + hrefEnding
     }
 
@@ -61,7 +66,7 @@ class Router {
     }
 
     getRenderList(path) {
-        const pathArr = path.split("/"),
+        const pathArr = path.split('/'),
             renderList = []
 
         let target = this.routes
@@ -86,21 +91,19 @@ class Router {
         return renderList
     }
 
-    // 对外暴露接口，接收完整URL
+    // 可以对外暴露接口，接收完整URL  history专用
     go(href) {
-        let pathArr = href.split('/'),
-            path,
-            newHref = '',
-            location = window.location
+        const { hrefToPath, changeRoute, hrefEnding } = this
 
-        pathArr.shift()
-        path = pathArr.join('/')
+        let path = hrefToPath(href),
+            location = window.location,
+            newHref = ''
 
         // history stack 逻辑
         if (location.pathname && location.pathname.length > 1) {
-            newHref = location.href.replace(location.pathname, `/${path}`)
+            newHref = location.href.replace(location.pathname, hrefEnding + path)
         } else {
-            newHref = `${location.origin}/${path + location.search}`
+            newHref = location.origin + hrefEnding + path + location.search
         }
         if (newHref === location.href) return
 
@@ -112,14 +115,32 @@ class Router {
         }, path, newHref)
 
         // 渲染逻辑
-        this.changeRoute(path)
+        changeRoute(path)
+    }
+
+    // 考虑到各种情况  从 URL 到 location.pathname.slice(1)
+    hrefToPath(href) {
+        const { hrefEnding, mode } = this
+        let path = href.split('?')[0],
+            pathArr = path.split(hrefEnding)
+
+        pathArr.shift()
+        return pathArr.join('/')
     }
 
     createHTMLHistory() {
-        const { changeRoute } = this
+        const { changeRoute, go } = this
 
         // 根据初始页面URL 初始化展现路由
         changeRoute(window.location.pathname.slice(1))
+
+        document.addEventListener('click', e => {
+            const target = e.target
+            if(target.tagName.toLowerCase() === 'a') {
+                e.preventDefault()
+                go(target.getAttribute('href'))
+            }
+        })
 
         // 监听 popstate 事件，非 pushState replaceState 操作都会触发
         window.addEventListener('popstate', e => {
@@ -148,26 +169,22 @@ class Router {
     }
 
     createHashHistory() {
-        window.addEventListener("hashchange", e => {
-                let { newURL, oldURL } = e
-                newURL = getHash(newURL)
-                oldURL = getHash(oldURL)
+        const { changeRoute, hrefEnding = '#/' } = this
 
-                callbacks[newURL]()
-            }, false)
+        // 根据初始页面URL 初始化展现路由
+        changeRoute(window.location.hash)
 
-        function getHash(url) {
-            return url.split("#").pop()
-        }
+        window.addEventListener('hashchange', e => {
+            let { newURL, oldURL } = e
+            // 默认前提 '#/' 只在整个 URL 存在一次
+            newURL = newURL.split(hrefEnding).pop()
+            oldURL = oldURL.split(hrefEnding).pop()
 
-        function setHash(hash, isPushHistory = true) {
-            const { location } = window
-            if (isPushHistory) {
-                location.hash = hash
-            } else {
-                location.replace(location.origin + `#${hash}`)
-            }
-        }
+            console.log(newURL, oldURL)
+            if(newURL === oldURL) return
+
+            changeRoute(newURL)
+        }, false)
     }
 }
 
