@@ -10,15 +10,30 @@
 预期接口
 
 {
-    mode: 
-    route: {
-        path:
-        name:
-        container:   // 最外层
-        component: {}
-        children: []
-        hooks: {}
-    }
+    mode: 'history',
+    routes: [{
+        path: '/',
+        name: 'home',
+        container: '#app',
+        component: home,
+        hooks: {
+            
+        }
+    },
+    {
+        path: '/home',
+        name: 'home',
+        container: '#app',
+        component: home,
+        hooks: {},
+        children: [{
+            path: '/hello',
+            name: 'hello',
+            container: '#hello',
+            component: hello,
+            hooks: {},
+        }]
+    }]
 }
 
 TODO：

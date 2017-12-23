@@ -5,13 +5,14 @@ class Router {
 
     constructor({ mode = 'hash', routes = [] }) {
         // 初始化  必须显式绑定？
-        this.changeRoute = this.changeRoute.bind(this)
-        this.getRenderList = this.getRenderList.bind(this)
-        this.renderComponents = this.renderComponents.bind(this)
-        this.cancelComponents = this.cancelComponents.bind(this)
-        this.go = this.go.bind(this)
         this.createHTMLHistory = this.createHTMLHistory.bind(this)
         this.createHashHistory = this.createHashHistory.bind(this)
+        this.go = this.go.bind(this)
+        this.changeRoute = this.changeRoute.bind(this)
+        this.uninstallComponents = this.uninstallComponents.bind(this)
+        this.installComponents = this.installComponents.bind(this)
+        
+        this.getRenderList = this.getRenderList.bind(this)
         this.hrefToPath = this.hrefToPath.bind(this)
 
         this.routes = arrayToObject(routes)
@@ -41,24 +42,40 @@ class Router {
     // path 暂定格式为 sd/asda/sa，即location.pathname.slice(1)
     // children 是存在组件嵌套视图的真实反映，要求container是包含关系,所以变化时必须要讲父组件全部渲染，性能方面考量 diff，少进行 dom 操作，已经完成组件层面的diff
     changeRoute(path) {
-        const { renderComponents, oldRenderList, cancelComponents, getRenderList } = this,
-            renderList = getRenderList(path)
+        const { installComponents, oldRenderList, uninstallComponents, getRenderList } = this,
+            renderList = Array.isArray(path) ? path : getRenderList(path)
+
+        renderList.forEach( item => {
+            let hooks = item.hooks
+            hooks && hooks.afterURLChange && hooks.afterURLChange()
+        })
 
         const { addList, deleteList } = diffObject(renderList, oldRenderList)
-        if (oldRenderList && oldRenderList.length) cancelComponents(deleteList)
-        renderComponents(addList)
+        if (oldRenderList && oldRenderList.length) uninstallComponents(deleteList)
+
+        renderList.forEach( item => {
+            let hooks = item.hooks
+            hooks && hooks.beforeComponentRender && hooks.beforeComponentRender()
+        })
+
+        installComponents(addList)
+
+        renderList.forEach( item => {
+            let hooks = item.hooks
+            hooks && hooks.afterComponentRender && hooks.afterComponentRender()
+        })
 
         this.oldRenderList = renderList
     }
 
-    renderComponents(routes) {
+    installComponents(routes) {
         routes.forEach(route => {
             const { container, component, hooks } = route
             document.querySelector(container).innerHTML = component
         })
     }
 
-    cancelComponents(routes) {
+    uninstallComponents(routes) {
         routes.forEach(route => {
             const { container, component, hooks } = route
             document.querySelector(container).innerHTML = ''
@@ -93,11 +110,12 @@ class Router {
 
     // 可以对外暴露接口，接收完整URL  history专用
     go(href) {
-        const { hrefToPath, changeRoute, hrefEnding } = this
+        const { hrefToPath, changeRoute, hrefEnding, getRenderList } = this
 
         let path = hrefToPath(href),
             location = window.location,
-            newHref = ''
+            newHref = '',
+            renderList = []
 
         // history stack 逻辑
         if (location.pathname && location.pathname.length > 1) {
@@ -106,6 +124,13 @@ class Router {
             newHref = location.origin + hrefEnding + path + location.search
         }
         if (newHref === location.href) return
+        
+        // 路由钩子逻辑，暂时单独处理，后续考虑加入整体路由处理器
+        renderList = getRenderList(path)
+        renderList.forEach( item => {
+            let hooks = item.hooks
+            hooks && hooks.beforeURLChange && hooks.beforeURLChange()
+        })
 
         this.order++
         window.history.pushState({
@@ -115,7 +140,7 @@ class Router {
         }, path, newHref)
 
         // 渲染逻辑
-        changeRoute(path)
+        changeRoute(renderList)
     }
 
     // 考虑到各种情况  从 URL 到 location.pathname.slice(1)
@@ -175,12 +200,12 @@ class Router {
         changeRoute(window.location.hash)
 
         window.addEventListener('hashchange', e => {
+            // hash already changed
             let { newURL, oldURL } = e
             // 默认前提 '#/' 只在整个 URL 存在一次
             newURL = newURL.split(hrefEnding).pop()
             oldURL = oldURL.split(hrefEnding).pop()
 
-            console.log(newURL, oldURL)
             if(newURL === oldURL) return
 
             changeRoute(newURL)
