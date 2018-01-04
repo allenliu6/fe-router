@@ -1,5 +1,4 @@
 import { supportsPushState, diffObject, arrayToObject } from './util'
-import { DOMInit, postClickCallback } from './DOMInit'
 
 class Router {
 
