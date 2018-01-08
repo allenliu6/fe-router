@@ -49,6 +49,7 @@ class Router {
             hooks && hooks.afterURLChange && hooks.afterURLChange()
         })
 
+        console.log(renderList, oldRenderList)
         const { addList, deleteList } = diffObject(renderList, oldRenderList)
         if (oldRenderList && oldRenderList.length) uninstallComponents(deleteList)
 
@@ -87,12 +88,8 @@ class Router {
 
         let target = this.routes
 
-        if (path === '') {
-            renderList.push(target['/'])
-        }
-
-        if (pathArr.length === 0) {
-            return target['/']
+        if (path === '' || pathArr.length === 0) {
+            return [target['/']]
         }
 
         for (let i = 0, length = pathArr.length; i < length; i++) {

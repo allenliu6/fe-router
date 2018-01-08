@@ -2,9 +2,9 @@
 // 标准格式  '/a/b'
 // 目前傻瓜式触发钩子    考虑组件自身生命周期   如果不重新渲染是否要触发钩子
 
-import home from './components/home/index'
-import hello from './components/hello/index'
-import another from './components/another/index'
+import home from './components/home'
+import hello from './components/hello'
+import another from './components/another'
 
 const params = {
     mode: 'history',

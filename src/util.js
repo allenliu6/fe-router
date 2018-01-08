@@ -39,7 +39,6 @@ export const diffObject = (target, source) => {
 }
 
 // 深度遍历拍平 children 属性
-
 export const deepSearch = target => {
     if (Array.isArray(target)) {
         target.forEach(elem => {
